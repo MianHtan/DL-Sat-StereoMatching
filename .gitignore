@@ -1,0 +1,7 @@
+__pycache__
+training_checkpoints*
+checkpoints
+demo_output
+img
+notebook.ipynb
+log*
