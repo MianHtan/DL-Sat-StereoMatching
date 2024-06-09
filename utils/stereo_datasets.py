@@ -119,6 +119,6 @@ def fetch_dataset(dataset_name, root, batch_size, resize, min_disp, max_disp, mo
         print("no such a dataset")
 
     train_loader = data.DataLoader(dataset = dataset, batch_size=batch_size,
-                                   pin_memory=False, shuffle=True,
+                                   pin_memory=True, shuffle=True,
                                    num_workers=int(os.environ.get('SLURM_CPUS_PER_TASK', 6)) - 2, drop_last=True)
     return train_loader

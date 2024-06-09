@@ -5,7 +5,7 @@ from torch.autograd import Variable
 import math
 
 from .Extractor import Stereonet_Extractor, EdgeRefinement
-from .cost_volume import concat_volume
+from utils.cost_volume import concat_volume, SoftArgMax
 
 def convbn3d(in_channel, out_channel, kernel_size, stride, padding):
     return nn.Sequential(nn.Conv3d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding), 
@@ -30,24 +30,28 @@ class StereoNet(nn.Module):
         self.edgeRefine = nn.ModuleList()
         for _ in range(refinement_time):
             self.edgeRefine.append(EdgeRefinement(image_channel=image_channel))
-        
+
     def forward(self, imgL, imgR, min_disp, max_disp):
+        regression = SoftArgMax(min_disp// (2**self.k), max_disp// (2**self.k))
+        regression.to(imgL.device)
+
         #extract feature map
         featureL = self.fea1(imgL) 
         featureR = self.fea1(imgR) # shape -> 32 * H/(2**k) * W/(2**k)
 
         # construct cost volume
-        cost_vol = concat_volume(featureL, featureR, min_disp, max_disp) # shape -> B * 64 * (maxdisp-mindisp)/(2**k) * H/(2**k) * W/(2**k)
+        cost_vol = concat_volume(featureL, featureR, min_disp//(2**self.k), max_disp//(2**self.k)) # shape -> B * 64 * (maxdisp-mindisp)/(2**k) * H/(2**k) * W/(2**k)
         # cost filtering
         cost_vol = self.cost_filter(cost_vol)
         # disparity regression
-        disp1 = self.softargmax(cost_vol, min_disp=min_disp// (2**self.k), max_disp=max_disp// (2**self.k))
+        disp1 = regression(cost_vol)
+        disp1 = disp1.unsqueeze(1)
 
         # upsample disparity and record
         disp = F.interpolate(disp1, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
         disp = disp * (2**self.k)
         disp_pred = {}
-        disp_pred['disp0'] = disp
+        disp_pred['disp0'] = disp.squeeze(1)
         
         # iterative refinement
         i = 0
@@ -61,26 +65,17 @@ class StereoNet(nn.Module):
                 # record
                 disp = F.interpolate(disp1, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
                 disp = disp * (2**(self.k-i-1))
-                disp_pred[f'disp{i+1}'] = disp
+                disp_pred[f'disp{i+1}'] = disp.squeeze(1)
                 i = i+1
             else:
                 disp1 = edgerefine_layer(imgL, disp1)
                 if i == self.refinement_time-1:
-                    disp_pred['final_disp'] = disp1
+                    disp_pred['final_disp'] = disp1.squeeze(1)
                 else:
-                    disp_pred[f'disp{i+1}'] = disp1
+                    disp_pred[f'disp{i+1}'] = disp1.squeeze(1)
                 i = i+1
 
         return disp_pred
-    
-    
-    def softargmax(self, cost, min_disp, max_disp):
-        cost_softmax = F.softmax(cost, dim = 2)
-        vec = torch.arange(min_disp, max_disp).to(cost.device)
-        vec = vec.unsqueeze(0).unsqueeze(1).unsqueeze(3).unsqueeze(4)
-        vec = vec.expand_as(cost_softmax).type_as(cost_softmax)
-        disp = torch.sum(vec*cost_softmax, dim=2)
-        return disp
     
     def _init_params(self):
         for m in self.modules():

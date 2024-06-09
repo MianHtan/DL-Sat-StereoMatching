@@ -7,42 +7,19 @@ import math
 from .Extractor import PSM_Extractor
 from .SPP import SPP
 from .EncoderDecoder import StackHourglass
-from .cost_volume import concat_volume
-
-class SoftArgMax(nn.Module):
-    def __init__(self, min_disp, max_disp):
-        super().__init__()
-        self.min_disp = min_disp
-        self.max_disp = max_disp
-        disp_num = torch.arange(min_disp, max_disp).type(torch.cuda.FloatTensor)
-        disp_num = disp_num.unsqueeze(0).unsqueeze(1).unsqueeze(3).unsqueeze(4)
-
-        self.disp_regression = nn.Conv3d(1, 1, (max_disp-min_disp, 1, 1), 1, 0, bias=False)
-
-        self.disp_regression.weight.data = disp_num
-        self.disp_regression.weight.requires_grad = False
-
-    def forward(self, cost_volume):
-        # shape -> B * 1 * (maxdisp-mindisp) * H * W
-        cost_softmax = F.softmax(cost_volume, dim=2)
-        
-        disp = self.disp_regression(cost_softmax) # shape -> B * 1 * 1 * H * W
-        disp = disp.squeeze(1).squeeze(1) # shape -> B * H * W
-        return disp
+from utils.cost_volume import concat_volume, SoftArgMax
 
 class PSMNet(nn.Module):
-    def __init__(self, min_disp, max_disp, image_channel=3):
+    def __init__(self, image_channel=3):
         super().__init__()
-        self.min_disp = min_disp
-        self.max_disp = max_disp
-        self.range = max_disp - min_disp
-
         self.fea1 = PSM_Extractor(image_channel, 128)
         self.spp = SPP(128)
         self.hourglass = StackHourglass()
-        self.regression = SoftArgMax(min_disp, max_disp)
 
-    def forward(self, imgL, imgR):
+    def forward(self, imgL, imgR, min_disp, max_disp):
+        regression = SoftArgMax(min_disp, max_disp)
+        regression.to(imgL.device)
+
         #extract feature map
         featureL1, featureL2 = self.fea1(imgL) 
         featureR1, featureR2 = self.fea1(imgR) # shape -> 32 * H/4 * W/4
@@ -50,7 +27,7 @@ class PSMNet(nn.Module):
         featureL = self.spp(featureL1, featureL2)
         featureR = self.spp(featureR1, featureR2)
         # construct cost volume
-        cost_vol = concat_volume(featureL, featureR, self.min_disp//4, self.max_disp//4) # shape -> B * 64 * (maxdisp-mindisp)/4 * H/4 * W/4
+        cost_vol = concat_volume(featureL, featureR, min_disp//4, max_disp//4) # shape -> B * 64 * (maxdisp-mindisp)/4 * H/4 * W/4
 
         # cost filtering
         cost_vol1, cost_vol2, cost_vol3 = self.hourglass(cost_vol) # shape -> B * 1 * (maxdisp-mindisp)/4 * H/4 * W/4
@@ -58,18 +35,18 @@ class PSMNet(nn.Module):
         disp_pred = {}
         if self.training:
             # shape -> B * 1 * (maxdisp-mindisp) * H * W
-            cost_vol1 = F.interpolate(cost_vol1, [self.range, imgL.size()[2], imgL.size()[3]], mode='trilinear')
-            cost_vol2 = F.interpolate(cost_vol2, [self.range, imgL.size()[2], imgL.size()[3]], mode='trilinear')
+            cost_vol1 = F.interpolate(cost_vol1, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')
+            cost_vol2 = F.interpolate(cost_vol2, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')
             # disparity regression
             # disp_pred['disp1'] = self.softargmax(cost_vol1, min_disp, max_disp) # shape -> B * H * W
             # disp_pred['disp2'] = self.softargmax(cost_vol2, min_disp, max_disp) # shape -> B * H * W
-            disp_pred['disp1'] = self.regression(cost_vol1)
-            disp_pred['disp2'] = self.regression(cost_vol2)
+            disp_pred['disp1'] = regression(cost_vol1)
+            disp_pred['disp2'] = regression(cost_vol2)
 
-        cost_vol3 = F.interpolate(cost_vol3, [self.range, imgL.size()[2], imgL.size()[3]], mode='trilinear')  
+        cost_vol3 = F.interpolate(cost_vol3, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')  
         # # disparity regression
         # disp_pred['final_disp'] = self.softargmax(cost_vol3, min_disp, max_disp)  # shape -> B * H * W
-        disp_pred['final_disp'] = self.regression(cost_vol3)
+        disp_pred['final_disp'] = regression(cost_vol3)
             
         return disp_pred
     
@@ -99,4 +76,9 @@ class PSMNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
                 
-
+    def _disable_batchnorm_tracking(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None

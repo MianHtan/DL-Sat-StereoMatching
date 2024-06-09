@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='PSMNet', help='model name: PSMNet, PSMNet_Edge, GwcNet, StereoNet')
     parser.add_argument('--image_channels', default=3,   type=int, help='image channel: 3 for RGB, 1 for grayscale')
     parser.add_argument('--min_disp',       default=-96, type=int, help='minimum disparity')
-    parser.add_argument('--max_disp',        default=64, type=int, help='maximum disparity')
+    parser.add_argument('--max_disp',        default=96, type=int, help='maximum disparity')
     # GwcNet
     parser.add_argument('--groups', default=32, type=int, help='number of groups for group convolution')
     # StereoNet
@@ -35,12 +35,12 @@ if __name__ == '__main__':
     parser.add_argument('--refinement_time', default=4, type=int, help='number of times to refine disparity')
 
     '''training config'''
-    parser.add_argument('--dataset_name',   type=str, default='DFC2019', 
+    parser.add_argument('--dataset_name',   type=str, default='WHUStereo', 
                         help='training set keywords: "DFC2019", "WHUStereo", "all"')
-    parser.add_argument('--root',           type=str, default='/media/win_d/honghao/training_data/DFC2019/track2_grayscale', 
-                        help='root path of training set')
-    # parser.add_argument('--root', type=str, default='/media/win_d/honghao/training_data/WHUStereo/WHUStereo_8UC3//with_ground_truth', 
+    # parser.add_argument('--root',           type=str, default='/media/win_d/honghao/training_data/DFC2019/track2_grayscale', 
     #                     help='root path of training set')
+    parser.add_argument('--root', type=str, default='/media/win_d/honghao/training_data/WHUStereo/WHUStereo_8UC3//with_ground_truth', 
+                        help='root path of training set')
     parser.add_argument('--batch_size',     type=int,   default=1, help='batch size')
 
     parser.add_argument('--epoch',          type=int,   default=5,      help='number of epoch')

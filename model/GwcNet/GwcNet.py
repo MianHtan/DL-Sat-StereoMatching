@@ -7,7 +7,7 @@ import math
 from .Extractor import PSM_Extractor
 from .SPP import SPP
 from .EncoderDecoder import StackHourglass
-from .cost_volume import concat_volume, Gwc_volume
+from utils.cost_volume import concat_volume, Gwc_volume, SoftArgMax
 
 
 class GwcNet(nn.Module):
@@ -17,9 +17,10 @@ class GwcNet(nn.Module):
         self.fea1 = PSM_Extractor(image_channel, 128)
         self.spp = SPP(128)
         self.hourglass = StackHourglass(input_channels=self.groups)
-        # self.hourglass = StackHourglass(input_channels=self.groups)
 
     def forward(self, imgL, imgR, min_disp, max_disp):
+        regression = SoftArgMax(min_disp, max_disp)
+
         #extract feature map
         featureL1, featureL2 = self.fea1(imgL) 
         featureR1, featureR2 = self.fea1(imgR) # shape -> B * 32 * H/4 * W/4
@@ -37,27 +38,17 @@ class GwcNet(nn.Module):
             cost_vol1 = F.interpolate(cost_vol1, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')
             cost_vol2 = F.interpolate(cost_vol2, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')
 
-            disp1 = self.softargmax(cost_vol1, min_disp, max_disp) # shape -> B * H * W
-            disp2 = self.softargmax(cost_vol2, min_disp, max_disp) # shape -> B * H * W
+            disp1 = regression(cost_vol1) # shape -> B * H * W
+            disp2 = regression(cost_vol2) # shape -> B * H * W
             disp_pred['disp1'] = disp1
             disp_pred['disp2'] = disp2
 
         cost_vol3 = F.interpolate(cost_vol3, [max_disp-min_disp, imgL.size()[2], imgL.size()[3]], mode='trilinear')   
         # # disparity regression
-        disp3 = self.softargmax(cost_vol3, min_disp, max_disp) # shape -> B * H * W
+        disp3 = regression(cost_vol3) # shape -> B * H * W
         disp_pred['final_disp'] = disp3        
             
         return disp_pred
-
-    
-    def softargmax(self, cost, min_disp, max_disp):
-        cost_softmax = F.softmax(cost, dim = 2)
-        vec = torch.arange(min_disp, max_disp).to(cost.device)
-        vec = vec.unsqueeze(0).unsqueeze(1).unsqueeze(3).unsqueeze(4)
-        vec = vec.expand_as(cost_softmax).type_as(cost_softmax)
-        disp = torch.sum(vec*cost_softmax, dim=2)
-        disp = disp.squeeze(1)
-        return disp
     
     def _init_params(self):
         for m in self.modules():

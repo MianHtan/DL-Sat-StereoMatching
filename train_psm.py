@@ -5,30 +5,26 @@ from torch.utils.tensorboard import SummaryWriter
 
 from tqdm import tqdm
 from pathlib import Path
-import argparse
-import os
-from datetime import datetime
 
 from utils.stereo_datasets import fetch_dataset
-from model.model_builder import build_model
 from validation import evaluation
 
 class Tripleloss(nn.Module):
     def __init__(self):
         super(Tripleloss, self).__init__()
     def forward(self, gt, disp_pred, valid):
-        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') 
-        + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') 
-        + 0.9 * F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
+        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
+            + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
+            + 0.9 * F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
         return loss
 
 class Tripleloss_edge(nn.Module):
     def __init__(self):
         super().__init__()
     def forward(self, gt, disp_pred, valid):
-        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') 
-        + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') 
-        + 0.9 * F.smooth_l1_loss(disp_pred['disp3'][valid], gt[valid], reduction='mean') 
+        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
+        + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
+        + 0.9 * F.smooth_l1_loss(disp_pred['disp3'][valid], gt[valid], reduction='mean') \
         + F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
         return loss
 
@@ -88,6 +84,8 @@ def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_dis
         criterion = Tripleloss_edge().to(device)
     elif model_name == 'StereoNet':
         criterion = HierarchicalLoss().to(device)
+    elif model_name == 'GCNet':
+        criterion = nn.SmoothL1Loss().to(device)
     else:
         criterion = Tripleloss().to(device)
 
@@ -101,9 +99,12 @@ def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_dis
             valid = valid.detach_()
 
             net.training
-            disp_pred = net(image1, image2)
+            disp_pred = net(image1, image2, min_disp, max_disp)
             assert net.training
-            loss = criterion(disp_gt, disp_pred, valid)
+            if model_name == 'GCNet':
+                loss = criterion(disp_gt[valid], disp_pred['final_disp'][valid])
+            else:
+                loss = criterion(disp_gt, disp_pred, valid)
             loss.backward()
             optimizer.step()
             scheduler.step()

@@ -21,8 +21,9 @@ def evaluation(net, dataset_name, root, device, min_disp, max_disp, batch_size=1
             image1, image2, disp_gt, valid = [x.to(device) for x in data_blob]
             
             net.eval()
+            net._disable_batchnorm_tracking()
             with torch.no_grad():
-                disp_pred = net(image1, image2)
+                disp_pred = net(image1, image2, min_disp, max_disp)
                 metric['epe'][1] += epe_tensor(disp_pred['final_disp'], disp_gt, valid)
                 metric['1px'][1] += px_error_tensor(disp_pred['final_disp'], disp_gt, valid, 1)
                 metric['2px'][1] += px_error_tensor(disp_pred['final_disp'], disp_gt, valid, 2)
@@ -30,7 +31,7 @@ def evaluation(net, dataset_name, root, device, min_disp, max_disp, batch_size=1
 
             net.train()
             with torch.no_grad():
-                disp_pred = net(image1, image2)
+                disp_pred = net(image1, image2, min_disp, max_disp)
                 metric['epe'][0] += epe_tensor(disp_pred['final_disp'], disp_gt, valid).item()
                 metric['1px'][0] += px_error_tensor(disp_pred['final_disp'], disp_gt, valid, 1)
                 metric['2px'][0] += px_error_tensor(disp_pred['final_disp'], disp_gt, valid, 2)
