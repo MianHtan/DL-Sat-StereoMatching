@@ -21,7 +21,7 @@ def evaluation(net, dataset_name, root, device, min_disp, max_disp, batch_size=1
             image1, image2, disp_gt, valid = [x.to(device) for x in data_blob]
             
             net.eval()
-            net._disable_batchnorm_tracking()
+            # net._disable_batchnorm_tracking()
             with torch.no_grad():
                 disp_pred = net(image1, image2, min_disp, max_disp)
                 metric['epe'][1] += epe_tensor(disp_pred['final_disp'], disp_gt, valid)

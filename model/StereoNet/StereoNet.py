@@ -44,35 +44,35 @@ class StereoNet(nn.Module):
         # cost filtering
         cost_vol = self.cost_filter(cost_vol)
         # disparity regression
-        disp1 = regression(cost_vol)
-        disp1 = disp1.unsqueeze(1)
+        disp = regression(cost_vol)
+        disp = disp.unsqueeze(1)
 
         # upsample disparity and record
-        disp = F.interpolate(disp1, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
-        disp = disp * (2**self.k)
+        disp0 = F.interpolate(disp, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
+        disp0 = disp0 * (2**self.k)
         disp_pred = {}
-        disp_pred['disp0'] = disp.squeeze(1)
+        disp_pred['disp0'] = disp0.squeeze(1)
         
         # iterative refinement
         i = 0
         for edgerefine_layer in self.edgeRefine:
             if i < self.k:
                 # upsample and refine
-                disp1 = F.interpolate(disp1, scale_factor=2, mode='bilinear', align_corners=False)
-                disp1 = disp1 * 2
-                imgL1 = F.interpolate(imgL, size=(disp1.shape[2:4]), mode='bilinear', align_corners=False)
-                disp1 = edgerefine_layer(imgL1, disp1)
+                disp = F.interpolate(disp, scale_factor=2, mode='bilinear', align_corners=False)
+                disp = disp * 2
+                imgL1 = F.interpolate(imgL, size=(disp.shape[2:4]), mode='bilinear', align_corners=False)
+                disp = edgerefine_layer(imgL1, disp)
                 # record
-                disp = F.interpolate(disp1, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
-                disp = disp * (2**(self.k-i-1))
-                disp_pred[f'disp{i+1}'] = disp.squeeze(1)
+                disp1 = F.interpolate(disp, size=(imgL.shape[2:4]), mode='bilinear', align_corners=False)
+                disp1 = disp1 * (2**(self.k-i-1))
+                disp_pred[f'disp{i+1}'] = disp1.squeeze(1)
                 i = i+1
             else:
-                disp1 = edgerefine_layer(imgL, disp1)
+                disp = edgerefine_layer(imgL, disp)
                 if i == self.refinement_time-1:
-                    disp_pred['final_disp'] = disp1.squeeze(1)
+                    disp_pred['final_disp'] = disp.squeeze(1)
                 else:
-                    disp_pred[f'disp{i+1}'] = disp1.squeeze(1)
+                    disp_pred[f'disp{i+1}'] = disp.squeeze(1)
                 i = i+1
 
         return disp_pred
@@ -93,4 +93,11 @@ class StereoNet(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
+                
+    def _disable_batchnorm_tracking(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
 

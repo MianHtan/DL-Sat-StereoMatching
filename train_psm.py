@@ -33,10 +33,9 @@ class HierarchicalLoss(nn.Module):
         super(HierarchicalLoss, self).__init__()
     def forward(self, gt, disp_pred, vaild):
         loss = 0
-        count = len(torch.nonzero(vaild))
         for k in disp_pred:
             loss += torch.sum(torch.sqrt(torch.pow(gt[vaild] - disp_pred[k][vaild], 2) + 4) /2 - 1) 
-        return loss/count
+        return loss/vaild.sum()
 
 def export_config(path, args):
     # export the config
@@ -50,7 +49,6 @@ def export_config(path, args):
 
 def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_disp, iters, init_lr, resize, device, log_dir='logs', save_frequency=None, require_validation=False, pretrain = None):
     print("Train on:", device)
-    Path("training_checkpoints_gwc").mkdir(exist_ok=True, parents=True)
 
     # tensorboard log file
     writer = SummaryWriter(log_dir=log_dir)

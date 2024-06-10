@@ -21,6 +21,7 @@ class PSMNet_Edge(nn.Module):
 
     def forward(self, imgL, imgR, min_disp, max_disp):
         regression = SoftArgMax(min_disp, max_disp)
+        regression.to(imgL.device)
         #extract feature map
         featureL1, featureL2 = self.fea1(imgL) 
         featureR1, featureR2 = self.fea1(imgR) # shape -> 32 * H/4 * W/4
@@ -28,7 +29,7 @@ class PSMNet_Edge(nn.Module):
         featureL = self.spp(featureL1, featureL2)
         featureR = self.spp(featureR1, featureR2)
         # construct cost volume
-        cost_vol = concat_volume(featureL, featureR, min_disp, max_disp) # shape -> B * 64 * (maxdisp-mindisp)/4 * H/4 * W/4
+        cost_vol = concat_volume(featureL, featureR, min_disp//4, max_disp//4) # shape -> B * 64 * (maxdisp-mindisp)/4 * H/4 * W/4
 
         # cost filtering
         cost_vol1, cost_vol2, cost_vol3 = self.hourglass(cost_vol) # shape -> B * 1 * (maxdisp-mindisp)/4 * H/4 * W/4
@@ -72,4 +73,11 @@ class PSMNet_Edge(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
+
+    def _disable_batchnorm_tracking(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
 
