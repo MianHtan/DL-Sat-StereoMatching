@@ -7,7 +7,7 @@ from tqdm import tqdm
 from pathlib import Path
 
 from utils.stereo_datasets import fetch_dataset
-from validation import evaluation
+from tools.validation import evaluation
 
 class Tripleloss(nn.Module):
     def __init__(self):
@@ -49,7 +49,6 @@ def export_config(path, args):
 
 def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_disp, iters, init_lr, resize, device, log_dir='logs', save_frequency=None, require_validation=False, pretrain = None):
     print("Train on:", device)
-
     # tensorboard log file
     writer = SummaryWriter(log_dir=log_dir)
 

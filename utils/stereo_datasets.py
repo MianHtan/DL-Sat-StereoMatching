@@ -90,7 +90,7 @@ class WHUStereo(StereoDataset):
             self.disparity_list += [disp]
 
 
-def fetch_dataset(dataset_name, root, batch_size, resize, min_disp, max_disp, mode="training"):
+def fetch_dataset(dataset_name, root, batch_size, resize, min_disp, max_disp, mode="training", pin_memory=False, shuffle=True, drop_last=True):
     
     if dataset_name == 'DFC2019':
         if mode == 'training':
@@ -119,6 +119,6 @@ def fetch_dataset(dataset_name, root, batch_size, resize, min_disp, max_disp, mo
         print("no such a dataset")
 
     train_loader = data.DataLoader(dataset = dataset, batch_size=batch_size,
-                                   pin_memory=True, shuffle=True,
-                                   num_workers=int(os.environ.get('SLURM_CPUS_PER_TASK', 6)) - 2, drop_last=True)
+                                   pin_memory=pin_memory, shuffle=shuffle,
+                                   num_workers=int(os.environ.get('SLURM_CPUS_PER_TASK', 6)) - 2, drop_last=drop_last)
     return train_loader

@@ -6,7 +6,7 @@ from datetime import datetime
 
 from model.model_builder import build_model
 
-from train_psm import train_psm
+from tools.train_psm import train_psm
 
 def export_config(path, args):
     # export the config
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain',       type=str,  default=None,   help='pretrained model path')
     args = parser.parse_args()
 
-    log_dir = f'logs_{args.model}/{args.dataset_name}_' + datetime.now().strftime('%Y-%m-%d_%H:%M')
+    log_dir = f'logs_{args.model}/' + datetime.now().strftime('%Y-%m-%d_%H:%M') + f'_{args.dataset_name}'
     os.makedirs(log_dir, exist_ok=True)
     export_config(log_dir, args)
 
