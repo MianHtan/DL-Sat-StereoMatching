@@ -6,11 +6,11 @@ import math
 
 from .Extractor import PSM_Extractor
 from .SPP import SPP
-from .EncoderDecoder_gwc import StackHourglass
+from .EncoderDecoder_psm import StackHourglass
 from utils.cost_volume import concat_volume, Gwc_volume, SoftArgMax
 
 
-class GwcNet(nn.Module):
+class PSMNet_Gwc(nn.Module):
     def __init__(self, image_channel=3, groups=8):
         super().__init__()
         self.groups = groups
@@ -32,6 +32,7 @@ class GwcNet(nn.Module):
         cost_vol = Gwc_volume(featureL, featureR, min_disp//4, max_disp//4, groups=self.groups) # shape -> B * groups * (maxdisp-mindisp)/4 * H/4 * W/4
         # cost filtering
         cost_vol1, cost_vol2, cost_vol3 = self.hourglass(cost_vol) # shape -> B * 1 * (maxdisp-mindisp)/4 * H/4 * W/4
+
         disp_pred = {}
         if self.training:
             # shape -> B * 1 * (maxdisp-mindisp) * H * W
@@ -67,3 +68,9 @@ class GwcNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
 
+    def _disable_batchnorm_tracking(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None

@@ -59,8 +59,7 @@ if __name__ == '__main__':
 
     net = build_model(args)
 
-    if args.model == 'GwcNet' or args.model == 'PSMNet' or args.model == 'PSMNet_Edge' or args.model == 'StereoNet':
-        train_psm(model_name=args.model, net = net, dataset_name=args.dataset_name, root = args.root,
-            batch_size=args.batch_size, min_disp=args.min_disp, max_disp=args.max_disp, iters=args.epoch, init_lr=args.init_lr,
-            resize = args.resize, save_frequency = args.save_frequency, require_validation=args.require_validation,
-            device=device, log_dir=log_dir, pretrain=args.pretrain)
+    train_psm(model_name=args.model, net = net, dataset_name=args.dataset_name, root = args.root,
+        batch_size=args.batch_size, min_disp=args.min_disp, max_disp=args.max_disp, iters=args.epoch, init_lr=args.init_lr,
+        resize = args.resize, save_frequency = args.save_frequency, require_validation=args.require_validation,
+        device=device, log_dir=log_dir, pretrain=args.pretrain)
