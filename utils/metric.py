@@ -28,3 +28,14 @@ def px_error_tensor(disp_pred:torch.tensor, gt:torch.tensor, valid:torch.tensor,
     px_error[disp_error > px] = 1
     px_error = px_error.sum()/valid.sum()
     return px_error.cpu()
+
+def cross_check(left, right):
+    cor_mask = np.zeros_like(left)
+    for i in range(left.shape[0]):
+        for j in range(left.shape[1]):
+            if left[i, j] == left[i, j]:
+                if j+int(left[i, j]) < 0 or  j+int(left[i, j]) >= left.shape[1]:
+                    continue
+                if np.abs(left[i, j] + right[i, j+int(left[i, j])]) > 3: 
+                    cor_mask[i, j] = 1
+    return cor_mask

@@ -4,6 +4,7 @@ from model.GwcNet.PSM_Gwc import PSMNet_Gwc
 from model.GwcNet.GwcNet import GwcNet
 from model.StereoNet.StereoNet import StereoNet
 from model.GCNet.GCNet import GCNet
+from model.lightStereo.lightstereo import LightStereo
 
 def build_model(args):
     if args.model == 'GCNet':
@@ -18,5 +19,7 @@ def build_model(args):
         model = GwcNet(args.image_channels, args.groups)
     if args.model == 'StereoNet':
         model = StereoNet(args.image_channels, args.k, args.refinement_time)
+    if args.model == 'LightStereo':
+        model = LightStereo()
 
     return model

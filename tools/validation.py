@@ -77,10 +77,13 @@ if __name__ == '__main__':
     parser.add_argument('--max_disp', type=int, default=96, help='maximum disparity')
 
     parser.add_argument('--ckpt', type=str, help='checkpoint path')
-
+    parser.add_argument('--device', type=str, default=None, help='gpu')
     args = parser.parse_args()
 
-    device = torch.device("cuda:0" if torch.cuda.is_available else "cpu")
+    if args.device is not None:
+        device = args.device
+    else:
+        device = torch.device("cuda:0" if torch.cuda.is_available else "cpu")
    
     print('Model:', args.model)
     print('Disp range:', args.min_disp, '~', args.max_disp)
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     print('Checkpoint:', args.ckpt)
 
     net = build_model(args)
-    net.load_state_dict(torch.load(args.ckpt), strict=True)
+    net.load_state_dict(torch.load(args.ckpt, map_location=device), strict=True)
 
     # net.eval()
     net = net.to(device)   

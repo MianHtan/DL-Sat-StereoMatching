@@ -50,6 +50,12 @@ class GwcNet(nn.Module):
             
         return disp_pred
     
+    def get_loss(self, disp_pred, gt, valid):
+        loss = 0.5 * F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
+            + 0.7 * F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
+            + 0.9 * F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
+        return loss
+    
     def _init_params(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -66,4 +72,11 @@ class GwcNet(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.bias.data.zero_()
+
+    def _disable_batchnorm_tracking(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm3d):
+                m.track_running_stats = False
+                m.running_mean = None
+                m.running_var = None
 

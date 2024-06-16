@@ -9,33 +9,6 @@ from pathlib import Path
 from utils.stereo_datasets import fetch_dataset
 from tools.validation import evaluation
 
-class Tripleloss(nn.Module):
-    def __init__(self):
-        super(Tripleloss, self).__init__()
-    def forward(self, gt, disp_pred, valid):
-        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
-            + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
-            + 0.9 * F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
-        return loss
-
-class Tripleloss_edge(nn.Module):
-    def __init__(self):
-        super().__init__()
-    def forward(self, gt, disp_pred, valid):
-        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
-        + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
-        + 0.9 * F.smooth_l1_loss(disp_pred['disp3'][valid], gt[valid], reduction='mean') \
-        + F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
-        return loss
-
-class HierarchicalLoss(nn.Module):
-    def __init__(self):
-        super(HierarchicalLoss, self).__init__()
-    def forward(self, gt, disp_pred, vaild):
-        loss = 0
-        for k in disp_pred:
-            loss += torch.sum(torch.sqrt(torch.pow(gt[vaild] - disp_pred[k][vaild], 2) + 4) /2 - 1) 
-        return loss/vaild.sum()
 
 def export_config(path, args):
     # export the config
@@ -47,19 +20,19 @@ def export_config(path, args):
             f.write(str + '\n')
     print("Config has been exported to {}".format(path))
 
-def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_disp, iters, init_lr, resize, device, log_dir='logs', save_frequency=None, require_validation=False, pretrain = None):
+def train(model_name, net, dataset_name, batch_size, root, min_disp, max_disp, iters, init_lr, resize, device, log_dir='logs', save_frequency=None, require_validation=False, pretrain = None):
     print("Train on:", device)
     # tensorboard log file
     writer = SummaryWriter(log_dir=log_dir)
 
     # define model
-    net.to(device)
     if pretrain is not None:
-        net.load_state_dict(torch.load(pretrain), strict=True)
+        net.load_state_dict(torch.load(pretrain, map_location=device), strict=True)
         print("Finish loading pretrain model!")
     else:
         net._init_params()
         print("Model parameters has been random initialize!")
+    net.to(device)
     net.train()
 
     # fetch traning data
@@ -76,15 +49,6 @@ def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_dis
     # optimizer = torch.optim.RMSprop(net.parameters(), lr=init_lr)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, init_lr, num_steps + 100,
                                               pct_start=0.01, cycle_momentum=False, anneal_strategy='linear')
-    
-    if model_name == 'PSMNet_Edge':
-        criterion = Tripleloss_edge().to(device)
-    elif model_name == 'StereoNet':
-        criterion = HierarchicalLoss().to(device)
-    elif model_name == 'GCNet':
-        criterion = nn.SmoothL1Loss().to(device)
-    else:
-        criterion = Tripleloss().to(device)
 
     # start traning
     should_keep_training = True
@@ -98,10 +62,8 @@ def train_psm(model_name, net, dataset_name, batch_size, root, min_disp, max_dis
             net.training
             disp_pred = net(image1, image2, min_disp, max_disp)
             assert net.training
-            if model_name == 'GCNet':
-                loss = criterion(disp_gt[valid], disp_pred['final_disp'][valid])
-            else:
-                loss = criterion(disp_gt, disp_pred, valid)
+            loss = net.get_loss(disp_pred, disp_gt, valid)
+
             loss.backward()
             optimizer.step()
             scheduler.step()

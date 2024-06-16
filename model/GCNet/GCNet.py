@@ -29,6 +29,10 @@ class GCNet(nn.Module):
         disp = {}
         disp['final_disp'] = regression(cost_vol) # shape -> B * H * W
         return disp
+
+    def get_loss(self, disp_pred, gt, valid):
+        loss = F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
+        return loss
     
     def _init_params(self):
         for m in self.modules():
