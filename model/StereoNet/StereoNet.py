@@ -76,6 +76,12 @@ class StereoNet(nn.Module):
                 i = i+1
 
         return disp_pred
+
+    def get_loss(self, disp_pred, gt, valid):
+        loss = 0
+        for k in disp_pred:
+            loss += torch.sum(torch.sqrt(torch.pow(gt[valid] - disp_pred[k][valid], 2) + 4) /2 - 1) 
+        return loss/valid.sum()
     
     def _init_params(self):
         for m in self.modules():

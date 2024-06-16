@@ -17,9 +17,9 @@ class downsampleblock(nn.Module):
         self.bn3 = nn.BatchNorm3d(output_channel)
     
     def forward(self, cost):
-        Y = F.relu(self.bn1(self.conv1(cost)))
-        Y = F.relu(self.bn2(self.conv2(Y)))
-        Y = F.relu(self.bn3(self.conv3(Y)))
+        Y = F.relu(self.bn1(self.conv1(cost)), inplace=True)
+        Y = F.relu(self.bn2(self.conv2(Y)), inplace=True)
+        Y = F.relu(self.bn3(self.conv3(Y)), inplace=True)
         return Y
     
 class Hourglass(nn.Module):
@@ -48,8 +48,8 @@ class Hourglass(nn.Module):
         self.upsample5 = nn.ConvTranspose3d(32, 1, kernel_size=3, padding=1, output_padding=1, stride=2)
 
     def forward(self, cost):
-        cost_in1 = F.relu(self.bn_in1(self.conv_in1(cost)))
-        cost_in1 = F.relu(self.bn_in2(self.conv_in2(cost_in1)))
+        cost_in1 = F.relu(self.bn_in1(self.conv_in1(cost)), inplace=True)
+        cost_in1 = F.relu(self.bn_in2(self.conv_in2(cost_in1)), inplace=True)
 
         #downsample
         cost_down1 = self.downsample1(cost_in1)

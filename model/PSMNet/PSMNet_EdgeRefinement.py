@@ -57,6 +57,13 @@ class PSMNet_Edge(nn.Module):
             
         return disp_pred
     
+    def get_loss(self, disp_pred, gt, valid):
+        loss = 0.5*F.smooth_l1_loss(disp_pred['disp1'][valid], gt[valid], reduction='mean') \
+        + 0.7*F.smooth_l1_loss(disp_pred['disp2'][valid], gt[valid], reduction='mean') \
+        + 0.9 * F.smooth_l1_loss(disp_pred['disp3'][valid], gt[valid], reduction='mean') \
+        + F.smooth_l1_loss(disp_pred['final_disp'][valid], gt[valid], reduction='mean')
+        return loss
+    
     def _init_params(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

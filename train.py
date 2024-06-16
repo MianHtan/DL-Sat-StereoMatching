@@ -6,7 +6,7 @@ from datetime import datetime
 
 from model.model_builder import build_model
 
-from tools.train_psm import train_psm
+from tools.trainer import train
 
 def export_config(path, args):
     # export the config
@@ -54,12 +54,12 @@ if __name__ == '__main__':
     log_dir = f'logs_{args.model}/' + datetime.now().strftime('%Y-%m-%d_%H:%M') + f'_{args.dataset_name}'
     os.makedirs(log_dir, exist_ok=True)
     export_config(log_dir, args)
-
+    
     device = torch.device("cuda:0" if torch.cuda.is_available else "cpu")
 
     net = build_model(args)
 
-    train_psm(model_name=args.model, net = net, dataset_name=args.dataset_name, root = args.root,
+    train(model_name=args.model, net = net, dataset_name=args.dataset_name, root = args.root,
         batch_size=args.batch_size, min_disp=args.min_disp, max_disp=args.max_disp, iters=args.epoch, init_lr=args.init_lr,
         resize = args.resize, save_frequency = args.save_frequency, require_validation=args.require_validation,
         device=device, log_dir=log_dir, pretrain=args.pretrain)
