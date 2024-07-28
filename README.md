@@ -8,6 +8,10 @@ Now support:
 - [GwcNet](https://arxiv.org/abs/1903.04025)
 - PSMNet + StereoNet edge refinement module
 - PSMNet + Gwc volume
+- [LightStereo](https://arxiv.org/abs/2406.19833)
+
+Still on working:
+- STTR
 
 ### Dataset
 The dataloader only support `DFC2019` and `WHU-Stereo` dataset<br />
@@ -35,3 +39,7 @@ tensorboard --logdir YOUR_LOGDIR
 ### Inference
 You can test a single pair of stereo image using the notebook `demo.ipynb`<br />
 Or use the `validation.py` to test the hold test set
+
+# Others
+- If you found any bugs or have any questions, please open an issue to discuss with me.
+- If this project helped you, please give a star to this repo. Thanks!

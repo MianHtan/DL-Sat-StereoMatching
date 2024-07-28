@@ -55,7 +55,7 @@ class DFC2019(StereoDataset):
         image1_list = sorted(glob(os.path.join(root, 'Track2-RGB-*/*LEFT_RGB.tif')))
         image2_list = sorted(glob(os.path.join(root, 'Track2-RGB-*/*RIGHT_RGB.tif')))
         disp_list = sorted(glob(os.path.join(root, 'Track2-Truth/*DSP.tif')))
-        if image_set == "testing":
+        if image_set == "testing" or image_set == "validating":
             image1_list = image1_list[::20]
             image2_list = image2_list[::20]
             disp_list = disp_list[::20]
@@ -80,10 +80,15 @@ class WHUStereo(StereoDataset):
             image2_list = sorted(glob(os.path.join(root, 'train/right/*.tiff')))
             disp_list = sorted(glob(os.path.join(root, 'train/disp/*.tiff')))
 
-        if image_set == "testing":
+        if image_set == "validating":
             image1_list = sorted(glob(os.path.join(root, 'val/left/*.tiff')))
             image2_list = sorted(glob(os.path.join(root, 'val/right/*.tiff')))
             disp_list = sorted(glob(os.path.join(root, 'val/disp/*.tiff')))
+
+        if image_set == "testing":
+            image1_list = sorted(glob(os.path.join(root, 'test/left/*.tiff')))
+            image2_list = sorted(glob(os.path.join(root, 'test/right/*.tiff')))
+            disp_list = sorted(glob(os.path.join(root, 'test/disp/*.tiff')))
 
         for idx, (img1, img2, disp) in enumerate(zip(image1_list, image2_list, disp_list)):
             self.image_list += [[img1, img2]]
@@ -96,16 +101,24 @@ def fetch_dataset(dataset_name, root, batch_size, resize, min_disp, max_disp, mo
         if mode == 'training':
             dataset = DFC2019(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp, 
                             image_set='training')
+        elif mode == 'validating':
+            dataset = DFC2019(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp,
+                            image_set='validating')  
         elif mode == 'testing':
             dataset = DFC2019(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp,
                             image_set='testing')     
+            
     elif dataset_name == 'WHUStereo':
         if mode == 'training':
             dataset = WHUStereo(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp,
                             image_set='training')
+        elif mode == 'validating':
+            dataset = WHUStereo(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp,
+                            image_set='validating') 
         elif mode == 'testing':
             dataset = WHUStereo(root=root, resize = resize, min_disp = min_disp, max_disp = max_disp,
                             image_set='testing') 
+            
     elif dataset_name == "all":
         if mode == 'training':
             dataset = DFC2019(root= '/media/win_d/honghao/training_data/DFC2019/track2_grayscale', resize = resize, min_disp = min_disp, max_disp = max_disp, image_set='training')
