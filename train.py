@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain',       type=str,  default=None,   help='pretrained model path')
     args = parser.parse_args()
 
-    log_dir = f'logs_{args.model}/' + datetime.now().strftime('%Y-%m-%d_%H:%M') + f'_{args.dataset_name}'
+    log_dir = f'model_logs/logs_{args.model}/' + datetime.now().strftime('%Y-%m-%d_%H:%M') + f'_{args.dataset_name}'
     os.makedirs(log_dir, exist_ok=True)
     export_config(log_dir, args)
     

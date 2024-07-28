@@ -4,5 +4,5 @@ checkpoints
 demo_output
 img
 notebook.ipynb
-log*
+*log*
 111.py

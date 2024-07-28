@@ -73,7 +73,7 @@ def train(model_name, net, dataset_name, batch_size, root, min_disp, max_disp, i
             if total_steps % save_frequency == (save_frequency - 1):
                 # load validation data 
                 if require_validation:
-                    metric = evaluation(net, dataset_name, root, device, min_disp, max_disp, batch_size, resize)
+                    metric = evaluation(net, dataset_name, root, device, min_disp, max_disp, batch_size, resize, 'validating')
 
                     writer.add_scalars(main_tag="metric/epe", tag_scalar_dict = {'train()': metric['epe'][0]}, global_step=total_steps+1)
                     writer.add_scalars(main_tag="metric/epe", tag_scalar_dict = {'eval()':metric['epe'][1]}, global_step=total_steps+1)
